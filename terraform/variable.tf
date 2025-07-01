@@ -9,3 +9,8 @@ variable "lambda_function_name" {
 variable "s3_bucket_name" {
   default = "pulseread-input-bucket"
 }
+
+variable "s3_summary_bucket_name" {
+  default = "pulseread-summary-bucket"
+}
+

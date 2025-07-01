@@ -1,5 +1,5 @@
-import boto3
 import json
+import boto3
 import os
 
 bedrock_runtime = boto3.client('bedrock-runtime', region_name='us-west-2')
@@ -20,15 +20,25 @@ def lambda_handler(event, context):
 
     # 4. Call Bedrock model
     bedrock_response = bedrock_runtime.invoke_model(
-        modelId='amazon.titan-text-lite-v1'
-        body=json.dumps({"prompt": prompt, "max_tokens: 200"}),
+        modelId='amazon.titan-text-lite-v1',
+        body=json.dumps({"prompt": prompt, "max_tokens": 200}),
         contentType='application/json'
     )
 
     result = json.loads(bedrock_response['body'].read())
     summary = result.get('completion', '[No summary returned]')
 
-    # 5. Log result (can extend to another S3 bucket or DynamoDB)
+    # 5. Save summary to second S3 bucket
+    summary_bucket = 'pulseread-summary-bucket'
+    summary_key = key.replace(".txt", "_summary.txt")
+
+    s3.put_object(
+        Bucket='pulseread-summary-bucket',
+        Key=summary_key,
+        Body=summary.encode('utf-8')
+    )
+
+    # 6. Log result (can extend to another S3 bucket or DynamoDB)
     print(f"Summary:\n{summary}")
 
     return {

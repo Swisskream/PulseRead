@@ -6,6 +6,10 @@ resource "aws_s3_bucket" "input_bucket" {
   name = var.s3_bucket_name
 }
 
+resource "aws_s3_bucket" "summary_bucket" {
+  bucket = var.s3_summary_bucket_name
+}
+
 resource "aws_iam_role" "lambda_exec" {
   name               = "pulseReadLambdaRole"
   assume_role_policy = <<EOF
