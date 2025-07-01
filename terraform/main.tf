@@ -3,7 +3,7 @@ provider "aws" {
 }
 
 resource "aws_s3_bucket" "input_bucket" {
-  name = var.s3_bucket_name
+  bucket = var.s3_bucket_name
 }
 
 resource "aws_s3_bucket" "summary_bucket" {
@@ -17,7 +17,7 @@ resource "aws_iam_role" "lambda_exec" {
         "Version": "2012-10-17",
         "Statement": [{
             "Effect": "Allow",
-            "Principal": { "Service": "lambda.amazon.aws.com" },
+            "Principal": { "Service": "lambda.amazonaws.com" },
             "Action": "sts:AssumeRole"
         }]
     }
@@ -25,12 +25,9 @@ EOF
 }
 
 resource "aws_iam_policy_attachment" "lambda_logs" {
-  function_name    = var.lambda_function_name
-  role             = aws_iam_role.lambda_exec.arn
-  handler          = "handler.lambda_handler"
-  runtime          = "python3.12"
-  filename         = "${path.module}/lambda/lambda.zip"
-  source_code_hash = filebase64sha256("${path.module}/lambda/lambda.zip")
+  name       = "lambda-basic-logs"
+  roles      = [aws_iam_role.lambda_exec.name]
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
 resource "aws_lambda_function" "pulse_lambda" {
