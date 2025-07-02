@@ -10,5 +10,3 @@ PulseRead is a serverless AWS solution that automatically ingests, processes, an
 - **Amazon Bedrock** – Summarize customer feedback  
 - **Terraform** – Infrastructure as code  
 - **Python** – Lambda logic and text utils  
-
-testing commits
