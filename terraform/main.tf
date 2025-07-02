@@ -24,6 +24,45 @@ resource "aws_iam_role" "lambda_exec" {
 EOF
 }
 
+resource "aws_iam_role_policy" "lambda_s3_access" {
+  name = "allow-lambda-s3-get"
+  role = aws_iam_role.lambda_exec.id
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "s3:GetObject"
+        ],
+        Resource = "${aws_s3_bucket.input_bucket.arn}/*"
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "s3:ListBucket"
+        ],
+        Resource = "${aws_s3_bucket.input_bucket.arn}"
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "s3:PutObject"
+        ],
+        Resource = "arn:aws:s3:::pulseread-summary-bucket/*"
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "bedrock:InvokeModel"
+        ],
+        Resource = "arn:aws:bedrock:us-west-2::foundation-model/anthropic.claude-v2"
+      }
+    ]
+  })
+}
+
 resource "aws_iam_policy_attachment" "lambda_logs" {
   name       = "lambda-basic-logs"
   roles      = [aws_iam_role.lambda_exec.name]
@@ -34,9 +73,10 @@ resource "aws_lambda_function" "pulse_lambda" {
   function_name    = var.lambda_function_name
   role             = aws_iam_role.lambda_exec.arn
   handler          = "handler.lambda_handler"
+  timeout          = 30
   runtime          = "python3.12"
-  filename         = "${path.module}/lambda/lambda.zip"
-  source_code_hash = filebase64sha256("${path.module}/lambda/lambda.zip")
+  filename         = "${path.module}/lambda/handler.zip"
+  source_code_hash = filebase64sha256("${path.module}/lambda/handler.zip")
 }
 
 resource "aws_s3_bucket_notification" "bucket_notify" {
