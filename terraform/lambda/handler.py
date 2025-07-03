@@ -1,9 +1,12 @@
 import json
 import boto3
 import os
+from datetime import datetime
 
 bedrock_runtime = boto3.client('bedrock-runtime', region_name='us-west-2')
 s3 = boto3.client('s3')
+dynamodb = boto3.resource('dynamodb')
+table = dynamodb.Table('pulse-summaries')
 
 def lambda_handler(event, context):
     # 1. Extract the S3 object info from the event
@@ -51,6 +54,15 @@ def lambda_handler(event, context):
     # 6. Log result (can extend to another S3 bucket or DynamoDB)
     print("Claude response object:", result)
     print("Extracted summary:", summary)
+
+        # Send to DynamoDB
+    table.put_item(Item={
+        'id': key,
+        'timestamp': datetime.utcnow().isoformat(),
+        'source_file': key,
+        'original_text': raw_text,
+        'summary': summary
+    })
 
     return {
         'statusCode': 200,

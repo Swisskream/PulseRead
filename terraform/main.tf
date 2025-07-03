@@ -10,6 +10,21 @@ resource "aws_s3_bucket" "summary_bucket" {
   bucket = var.s3_summary_bucket_name
 }
 
+resource "aws_dynamodb_table" "pulse_summaries" {
+  name = "pulse-summaries"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key = "id"
+
+  attribute {
+    name = "id"
+    type = "S"
+  }
+
+  tags = {
+    Project = "PulseRead"
+  }
+}
+
 resource "aws_iam_role" "lambda_exec" {
   name               = "pulseReadLambdaRole"
   assume_role_policy = <<EOF
@@ -51,6 +66,13 @@ resource "aws_iam_role_policy" "lambda_s3_access" {
           "s3:PutObject"
         ],
         Resource = "arn:aws:s3:::pulseread-summary-bucket/*"
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "dynamodb:PutItem"
+        ],
+        Resource = "${aws_dynamodb_table.pulse_summaries.arn}"
       },
       {
         Effect = "Allow",
