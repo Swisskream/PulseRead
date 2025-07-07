@@ -11,9 +11,9 @@ resource "aws_s3_bucket" "summary_bucket" {
 }
 
 resource "aws_dynamodb_table" "pulse_summaries" {
-  name = "pulse-summaries"
+  name         = "pulse-summaries"
   billing_mode = "PAY_PER_REQUEST"
-  hash_key = "id"
+  hash_key     = "id"
 
   attribute {
     name = "id"
@@ -70,7 +70,15 @@ resource "aws_iam_role_policy" "lambda_s3_access" {
       {
         Effect = "Allow",
         Action = [
-          "dynamodb:PutItem"
+          "s3:PutObject"
+        ],
+        Resource = "${aws_s3_bucket.input_bucket.arn}/*"
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "dynamodb:PutItem",
+          "dynamodb:Scan",
         ],
         Resource = "${aws_dynamodb_table.pulse_summaries.arn}"
       },
@@ -101,6 +109,32 @@ resource "aws_lambda_function" "pulse_lambda" {
   source_code_hash = filebase64sha256("${path.module}/lambda/handler.zip")
 }
 
+resource "aws_lambda_function" "presign_lambda" {
+  function_name    = "getPresignedURL"
+  role             = aws_iam_role.lambda_exec.arn
+  handler          = "get_presigned_url.lambda_handler"
+  runtime          = "python3.12"
+  timeout          = 10
+  filename         = "${path.module}/lambda/get_presigned_url.zip"
+  source_code_hash = filebase64sha256("${path.module}/lambda/get_presigned_url.zip")
+
+  environment {
+    variables = {
+      INPUT_BUCKET_NAME = aws_s3_bucket.input_bucket.bucket
+    }
+  }
+}
+
+resource "aws_lambda_function" "get_summaries" {
+  function_name = "getSummaries"
+  role          = aws_iam_role.lambda_exec.arn
+  handler       = "get_summaries.lambda_handler"
+  runtime       = "python3.12"
+  timeout       = 10
+  filename      = "${path.module}/lambda/get_summaries.zip"
+  source_code_hash = filebase64sha256("${path.module}/lambda/get_summaries.zip")
+}
+
 resource "aws_s3_bucket_notification" "bucket_notify" {
   bucket = aws_s3_bucket.input_bucket.id
 
@@ -118,4 +152,64 @@ resource "aws_lambda_permission" "allow_bucket" {
   function_name = aws_lambda_function.pulse_lambda.function_name
   principal     = "s3.amazonaws.com"
   source_arn    = aws_s3_bucket.input_bucket.arn
+}
+
+resource "aws_apigatewayv2_api" "presign_api" {
+  name          = "PulseReadPresignAPI"
+  protocol_type = "HTTP"
+}
+
+resource "aws_apigatewayv2_integration" "presign_integration" {
+  api_id                 = aws_apigatewayv2_api.presign_api.id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = aws_lambda_function.presign_lambda.invoke_arn
+  integration_method     = "POST"
+  payload_format_version = "2.0"
+}
+
+resource "aws_apigatewayv2_route" "presign_route" {
+  api_id    = aws_apigatewayv2_api.presign_api.id
+  route_key = "GET /get-presigned-url"
+  target    = "integrations/${aws_apigatewayv2_integration.presign_integration.id}"
+}
+
+resource "aws_lambda_permission" "allow_apigw_presign" {
+  statement_id  = "AllowInvokeFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.presign_lambda.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.presign_api.execution_arn}/*/*"
+}
+
+resource "aws_apigatewayv2_stage" "presign_stage" {
+  api_id      = aws_apigatewayv2_api.presign_api.id
+  name        = "prod"
+  auto_deploy = true
+
+  default_route_settings {
+    data_trace_enabled = true
+    detailed_metrics_enabled = true
+  }
+}
+
+resource "aws_apigatewayv2_integration" "summaries_integration" {
+  api_id                 = aws_apigatewayv2_api.presign_api.id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = aws_lambda_function.get_summaries.invoke_arn
+  integration_method     = "POST"
+  payload_format_version = "2.0"
+}
+
+resource "aws_apigatewayv2_route" "summaries_route" {
+  api_id    = aws_apigatewayv2_api.presign_api.id
+  route_key = "GET /get-summaries"
+  target    = "integrations/${aws_apigatewayv2_integration.summaries_integration.id}"
+}
+
+resource "aws_lambda_permission" "allow_apigw_summaries" {
+  statement_id  = "AllowInvokeFromAPIGatewayForSummaries"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.get_summaries.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.presign_api.execution_arn}/*/*"
 }
