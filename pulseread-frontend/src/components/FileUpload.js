@@ -1,5 +1,6 @@
 import React, {useState} from 'react';
 import axios from 'axios';
+import '../stylesheets/fileupload.css';
 
 function FileUpload(){
     const [file, setFile] = useState(null);
@@ -36,10 +37,10 @@ function FileUpload(){
     };
 
     return (
-        <div style={{padding: '1rem'}}>
-            <input type="file" accept='.txt' onChange={handleFileChange} />
+        <div className='upload-container'>
+            <input className='choose-file' type="file" accept='.txt' onChange={handleFileChange} />
             <button onClick={uploadFile}>Submit</button>
-            <p>{status}</p>
+            <p className='upload-status'>{status}</p>
         </div>
     );
 }

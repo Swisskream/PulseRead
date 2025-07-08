@@ -1,5 +1,6 @@
 import React, {useEffect, useState} from 'react';
 import axios from 'axios';
+import '../stylesheets/summarylist.css';
 
 function SummaryList() {
     const [summaries, setSummaries] = useState([]);
@@ -14,10 +15,10 @@ function SummaryList() {
     }, []);
 
     return (
-        <div>
+        <div className='summary-container'>
             <h2>Summary History</h2>
             {summaries.map((item) => (
-                <div key={item.id} style={{border: '1px solid #ccc', padding: '1rem', marginBottom: '1rem'}}>
+                <div className='summary-card' key={item.id}>
                     <h4>{item.source_file}</h4>
                     <p><strong>Summary:</strong> {item.summary}</p>
                     <p><strong>Time:</strong> {item.timestamp}</p>
