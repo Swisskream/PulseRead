@@ -6,7 +6,7 @@ function SummaryList() {
 
     useEffect(() => {
         async function fetchSummaries() {
-            const res = await axios.get('https://78uh12wvn2.execute-api.us-west-2.amazonaws.com/get-summaries');
+            const res = await axios.get('https://78uh12wvn2.execute-api.us-west-2.amazonaws.com/prod/get-summaries');
             setSummaries(res.data);
         }
 

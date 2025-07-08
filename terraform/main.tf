@@ -78,7 +78,7 @@ resource "aws_iam_role_policy" "lambda_s3_access" {
         Effect = "Allow",
         Action = [
           "dynamodb:PutItem",
-          "dynamodb:Scan",
+          "dynamodb:Scan"
         ],
         Resource = "${aws_dynamodb_table.pulse_summaries.arn}"
       },
@@ -173,6 +173,12 @@ resource "aws_apigatewayv2_route" "presign_route" {
   target    = "integrations/${aws_apigatewayv2_integration.presign_integration.id}"
 }
 
+resource "aws_apigatewayv2_route" "cors_options" {
+  api_id    = aws_apigatewayv2_api.presign_api.id
+  route_key = "OPTIONS /{proxy+}"
+  target    = "integrations/${aws_apigatewayv2_integration.presign_integration.id}"
+}
+
 resource "aws_lambda_permission" "allow_apigw_presign" {
   statement_id  = "AllowInvokeFromAPIGateway"
   action        = "lambda:InvokeFunction"
@@ -187,6 +193,8 @@ resource "aws_apigatewayv2_stage" "presign_stage" {
   auto_deploy = true
 
   default_route_settings {
+    throttling_rate_limit  = 100
+    throttling_burst_limit = 50
     data_trace_enabled = true
     detailed_metrics_enabled = true
   }

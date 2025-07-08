@@ -12,11 +12,12 @@ function FileUpload(){
     const uploadFile = async () => {
         if (!file) return;
 
+        console.log("Uploading:", file.name);
         setStatus('Uploading...');
 
         try {
             // Request presigned URL from backend
-            const response = await axios.get('https://78uh12wvn2.execute-api.us-west-2.amazonaws.com/get-presigned-url', {
+            const response = await axios.get('https://78uh12wvn2.execute-api.us-west-2.amazonaws.com/prod/get-presigned-url', {
                 params: {filename: file.name}
             });
 
